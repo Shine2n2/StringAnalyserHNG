@@ -21,10 +21,11 @@ namespace StringAnalyser.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateStringDto dto, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(dto.Value?.ToString()))
+            
+            if (!ModelState.IsValid)
                 return BadRequest(new { error = "'value' must be a string." });
 
-            var (result, statusCode) = await _service.CreateAsync(dto.Value, ct);
+            var (result, statusCode) = await _service.CreateAsync(dto.Value!, ct);
 
             if (result == null)
                 return StatusCode(statusCode, new { error = "Failed to create string." });
@@ -36,6 +37,10 @@ namespace StringAnalyser.Controllers
                 Properties = result.Properties,
                 CreatedAt = result.CreatedAt
             };
+
+            
+            if (statusCode == 201)
+                return CreatedAtAction(nameof(GetByValue), new { string_value = result.Value }, response);
 
             return StatusCode(statusCode, response);
         }

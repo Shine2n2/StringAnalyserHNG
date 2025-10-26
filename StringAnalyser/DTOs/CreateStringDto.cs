@@ -5,8 +5,6 @@ namespace StringAnalyser.DTOs
     public class CreateStringDto
     {
         [Required]
-        public object? Value { get; set; }
-
-        
+        public string? Value { get; set; }
     }
 }

@@ -1,13 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using StringAnalyser.Data;
-using StringAnalyser.DTOs;
 using StringAnalyser.Interfaces;
 using StringAnalyser.Models;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Security.Cryptography;
-
 
 namespace StringAnalyser.Services
 {
@@ -20,49 +17,16 @@ namespace StringAnalyser.Services
             _db = db;
         }
 
-        public async Task<(AnalyzedString result, int statusCode)> CreateAsync(object valueObj, CancellationToken ct = default)
+        public async Task<(AnalyzedString result, int statusCode)> CreateAsync(string value, CancellationToken ct = default)
         {
-          
-            if (valueObj == null)
+            
+            if (value == null)
                 return (null!, 400);
-
-           
-            string? value = null;
-
-            if (valueObj is CreateStringDto dto)
-            {
-                if (dto.Value == null) return (null!, 400);
-
-                if (dto.Value is string s) value = s;
-                else if (dto.Value is JsonElement je)
-                {
-                    if (je.ValueKind == JsonValueKind.String) value = je.GetString();
-                    else return (null!, 422);
-                }
-                else
-                {
-                    
-                    return (null!, 422);
-                }
-            }
-            else if (valueObj is string sTop)
-            {
-                value = sTop;
-            }
-            else if (valueObj is JsonElement jeTop)
-            {
-                if (jeTop.ValueKind == JsonValueKind.String) value = jeTop.GetString();
-                else return (null!, 422);
-            }
-            else
-            {
-                return (null!, 422);
-            }
 
             if (string.IsNullOrWhiteSpace(value))
                 return (null!, 400);
 
-            
+
             var hash = ComputeSha256Hex(value);
 
            
@@ -72,14 +36,14 @@ namespace StringAnalyser.Services
                 return (existing, 409);
             }
 
-            
+          
             var existingByValue = await _db.Stringss.FirstOrDefaultAsync(s => s.Value == value, ct);
             if (existingByValue != null)
             {
                 return (existingByValue, 409);
             }
 
-           
+          
             var properties = Analyze(value, hash);
 
             var entity = new AnalyzedString
@@ -103,7 +67,7 @@ namespace StringAnalyser.Services
             }
             catch (DbUpdateException)
             {
-       
+               
                 var found = await _db.Stringss.FindAsync(new object[] { hash }, ct);
                 if (found != null) return (found, 409);
                 return (null!, 409);
