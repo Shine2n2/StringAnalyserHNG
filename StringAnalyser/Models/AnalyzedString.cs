@@ -18,7 +18,7 @@ namespace StringAnalyser.Models
         [Required]
         public StringProperties Properties { get; set; } = null!;
 
-        // Flattened properties for EF Core filtering
+      
         public bool IsPalindrome { get; set; }
         public int Length { get; set; }
         public int WordCount { get; set; }

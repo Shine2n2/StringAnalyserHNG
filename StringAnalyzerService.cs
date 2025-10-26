@@ -1,13 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using StringAnalyser.Data;
 using StringAnalyser.DTOs;
 using StringAnalyser.Interfaces;
 using StringAnalyser.Models;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
+using System;
 using System.Security.Cryptography;
-
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Text.Json;
 
 namespace StringAnalyser.Services
 {
@@ -22,17 +22,20 @@ namespace StringAnalyser.Services
 
         public async Task<(AnalyzedString result, int statusCode)> CreateAsync(object valueObj, CancellationToken ct = default)
         {
-          
+            // Validate presence
             if (valueObj == null)
                 return (null!, 400);
 
-           
+            // Normalize to string Accepting multiple possible shapes:
+            // - CreateStringDto (dto.Value may be object/JsonElement/string)
+            // - JsonElement (model binder produces this when DTO property is 'object')
+            // - string
             string? value = null;
 
             if (valueObj is CreateStringDto dto)
             {
+                // dto.Value may be string, JsonElement, or other
                 if (dto.Value == null) return (null!, 400);
-
                 if (dto.Value is string s) value = s;
                 else if (dto.Value is JsonElement je)
                 {
@@ -41,45 +44,46 @@ namespace StringAnalyser.Services
                 }
                 else
                 {
-                    
+                    // other primitive types are not accepted
                     return (null!, 422);
                 }
-            }
-            else if (valueObj is string sTop)
-            {
-                value = sTop;
             }
             else if (valueObj is JsonElement jeTop)
             {
                 if (jeTop.ValueKind == JsonValueKind.String) value = jeTop.GetString();
                 else return (null!, 422);
             }
+            else if (valueObj is string sTop)
+            {
+                value = sTop;
+            }
             else
             {
+                // unknown payload shape
                 return (null!, 422);
             }
 
             if (string.IsNullOrWhiteSpace(value))
                 return (null!, 400);
 
-            
+            // compute SHA-256 hash (hex lowercase)
             var hash = ComputeSha256Hex(value);
 
-           
+            // check conflict by id (hash)
             var existing = await _db.Stringss.FindAsync(new object[] { hash }, ct);
             if (existing != null)
             {
                 return (existing, 409);
             }
 
-            
+            // optional: also check exact value to be safe
             var existingByValue = await _db.Stringss.FirstOrDefaultAsync(s => s.Value == value, ct);
             if (existingByValue != null)
             {
                 return (existingByValue, 409);
             }
 
-           
+            // compute properties
             var properties = Analyze(value, hash);
 
             var entity = new AnalyzedString
@@ -103,7 +107,7 @@ namespace StringAnalyser.Services
             }
             catch (DbUpdateException)
             {
-       
+                // concurrent insert / unique constraint violation: try to return existing record
                 var found = await _db.Stringss.FindAsync(new object[] { hash }, ct);
                 if (found != null) return (found, 409);
                 return (null!, 409);
@@ -180,6 +184,7 @@ namespace StringAnalyser.Services
 
         private static bool IsPalindrome(string s)
         {
+            // case-insensitive, keep all characters (spaces/punctuation)
             if (s == null) return false;
             var lower = s.ToLowerInvariant();
             int i = 0, j = lower.Length - 1;
@@ -212,4 +217,3 @@ namespace StringAnalyser.Services
 
         #endregion
     }
-}

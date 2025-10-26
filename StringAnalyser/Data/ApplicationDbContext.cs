@@ -9,13 +9,13 @@ namespace StringAnalyser.Data
 
     public class ApplicationDbContext : DbContext
     {
-        public DbSet<AnalyzedString> Strings { get; set; } = null!;
+        public DbSet<AnalyzedString> Stringss { get; set; } = null!;
 
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Store StringProperties as JSON
+           
             modelBuilder.Entity<AnalyzedString>()
                 .Property(p => p.Properties)
                 .HasConversion(

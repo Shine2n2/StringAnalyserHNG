@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using StringAnalyser.Data;
 using StringAnalyser.Interfaces;
 using StringAnalyser.Services;
@@ -20,6 +21,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // Application services
 builder.Services.AddScoped<IStringAnalyzerService, StringAnalyzerService>();
 builder.Services.AddScoped<INaturalLanguageParser, NaturalLanguageParser>();
+//builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 var app = builder.Build();
 

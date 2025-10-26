@@ -6,7 +6,7 @@ namespace StringAnalyser.Services
 
     public class NaturalLanguageParser : INaturalLanguageParser
     {
-        // Simple heuristic parser for supported examples
+      
         public Task<(StringFilter? filters, object interpretedQuery)> ParseAsync(string query, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(query)) return Task.FromResult<(StringFilter?, object)>((null, new { original = query }));
@@ -15,7 +15,7 @@ namespace StringAnalyser.Services
 
             var filter = new StringFilter();
 
-            // single word palindromic
+         
             if (Regex.IsMatch(q, @"\bsingle word\b") && q.Contains("palindrom"))
             {
                 filter.WordCount = 1;
@@ -26,7 +26,7 @@ namespace StringAnalyser.Services
                 ));
             }
 
-            // "strings longer than X characters"
+            
             var mLonger = Regex.Match(q, @"longer than (\d+)");
             if (mLonger.Success)
             {
@@ -40,7 +40,7 @@ namespace StringAnalyser.Services
                 }
             }
 
-            // "strings containing the letter z"
+    
             var mContainChar = Regex.Match(q, @"containing the letter (\w)");
             if (mContainChar.Success)
             {
@@ -51,18 +51,18 @@ namespace StringAnalyser.Services
                 ));
             }
 
-            // "palindromic strings that contain the first vowel"
+            
             if (q.Contains("palindrom") && q.Contains("first vowel"))
             {
                 filter.IsPalindrome = true;
-                filter.ContainsCharacter = "a"; // simplistic heuristic: treat 'a' as first vowel
+                filter.ContainsCharacter = "a"; 
                 return Task.FromResult<(StringFilter?, object)>((
                     filter,
                     new { original = query, parsed_filters = new { is_palindrome = true, contains_character = "a" } }
                 ));
             }
 
-            // If not matched, return null to indicate unable to parse.
+           
             return Task.FromResult<(StringFilter?, object)>((null, new { original = query }));
         }
     }

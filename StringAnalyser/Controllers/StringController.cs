@@ -5,14 +5,6 @@ using StringAnalyser.Interfaces;
 
 namespace StringAnalyser.Controllers
 {
-    //[Route("api/[controller]")]
-    //[ApiController]
-    //public class StringController : ControllerBase
-    //{
-    //}
-
-
-
     [ApiController]
     [Route("strings")]
     public class StringsController : ControllerBase
@@ -67,7 +59,6 @@ namespace StringAnalyser.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool? is_palindrome, [FromQuery] int? min_length, [FromQuery] int? max_length, [FromQuery] int? word_count, [FromQuery] string? contains_character, CancellationToken ct = default)
         {
-            // validate query types are already bound by model binding. We just compose filter
             var filter = new StringFilter
             {
                 IsPalindrome = is_palindrome,
@@ -80,7 +71,7 @@ namespace StringAnalyser.Controllers
             var data = await _service.GetAllAsync(filter, ct);
             var response = new
             {
-                data = data.Select(d => new
+                data = data.Select(d => new 
                 {
                     id = d.Id,
                     value = d.Value,
@@ -104,13 +95,48 @@ namespace StringAnalyser.Controllers
         [HttpGet("filter-by-natural-language")]
         public async Task<IActionResult> FilterByNaturalLanguage([FromQuery] string query, CancellationToken ct)
         {
+            if (string.IsNullOrWhiteSpace(query))
+                return BadRequest(new { error = "Query is required.", interpreted_query = new { original = query } });
+
             var (filters, interpreted) = await _parser.ParseAsync(query, ct);
+
             if (filters == null)
             {
+                var found = await _service.GetByValueAsync(query, ct);
+                if (found != null)
+                {
+                    var responseSingle = new
+                    {
+                        data = new[]
+                        {
+                            new
+                            {
+                                id = found.Id,
+                                value = found.Value,
+                                properties = found.Properties,
+                                created_at = found.CreatedAt
+                            }
+                        },
+                        count = 1,
+                        interpreted_query = new { original = query, note = "treated as exact-value lookup" }
+                    };
+                    return Ok(responseSingle);
+                }
+
+                
                 return BadRequest(new { error = "Unable to parse natural language query", interpreted_query = interpreted });
             }
 
-            // additional validation for conflicting filters could happen here
+           
+            if (filters.MinLength.HasValue && filters.MaxLength.HasValue && filters.MinLength.Value > filters.MaxLength.Value)
+            {
+                return UnprocessableEntity(new
+                {
+                    error = "Parsed filters are conflicting (min_length > max_length).",
+                    interpreted_query = interpreted
+                });
+            }
+
             var data = await _service.GetAllAsync(filters, ct);
             var response = new
             {
